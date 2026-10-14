@@ -87,29 +87,16 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
       _isSubmitting = false;
     });
 
-    showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        icon: const Icon(
-          Icons.check_circle_outline_rounded,
-          color: Colors.green,
-          size: 48,
+    final reportNumber =
+        'QF-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
+
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => SubmissionConfirmationScreen(
+          reportNumber: reportNumber,
+          issueType: _selectedIssueType!,
+          location: _locationController.text.trim(),
         ),
-        title: const Text('Report Submitted!'),
-        content: const Text(
-          'Your report passed validation. '
-          'Database submission and report tracking will be added later.',
-          textAlign: TextAlign.center,
-        ),
-        actions: [
-          FilledButton(
-            onPressed: () {
-              Navigator.of(dialogContext).pop();
-              Navigator.of(context).pop();
-            },
-            child: const Text('Done'),
-          ),
-        ],
       ),
     );
   }
@@ -379,6 +366,223 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
           width: 2,
         ),
       ),
+    );
+  }
+}
+
+class SubmissionConfirmationScreen extends StatelessWidget {
+  final String reportNumber;
+  final String issueType;
+  final String location;
+
+  const SubmissionConfirmationScreen({
+    super.key,
+    required this.reportNumber,
+    required this.issueType,
+    required this.location,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        title: const Text(
+          'Submission Confirmation',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
+      ),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: Colors.green.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.check_circle_rounded,
+                    color: Colors.green,
+                    size: 68,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Report Submitted!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 27,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.darkText,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Thank you for helping improve our campus. '
+                  'Your report has been received.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 15,
+                    height: 1.5,
+                    color: AppTheme.mutedText,
+                  ),
+                ),
+                const SizedBox(height: 28),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: AppTheme.darkText.withValues(alpha: 0.12),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'REPORT NUMBER',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.mutedText,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      SelectableText(
+                        reportNumber,
+                        style: const TextStyle(
+                          fontSize: 23,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.darkText,
+                        ),
+                      ),
+                      const Divider(height: 30),
+                      const Text(
+                        'INITIAL STATUS',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.mutedText,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryYellow.withValues(alpha: 0.25),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.inbox_outlined,
+                              size: 18,
+                              color: AppTheme.darkText,
+                            ),
+                            SizedBox(width: 8),
+                            Text(
+                              'Received',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.darkText,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      const Text(
+                        'REPORT DETAILS',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.mutedText,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _detailRow(Icons.category_outlined, issueType),
+                      const SizedBox(height: 10),
+                      _detailRow(Icons.location_on_outlined, location),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 28),
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: FilledButton(
+                    onPressed: () {
+                      // Return to the report form's previous screen.
+                      Navigator.of(context)
+                        ..pop()
+                        ..pop();
+                    },
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppTheme.primaryYellow,
+                      foregroundColor: AppTheme.darkText,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: const Text(
+                      'Done',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _detailRow(IconData icon, String text) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          icon,
+          size: 20,
+          color: AppTheme.mutedText,
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(
+              fontSize: 14,
+              color: AppTheme.darkText,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
