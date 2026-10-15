@@ -1,10 +1,9 @@
-
 import 'package:flutter/material.dart';
 
-import '../screens/notifications_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/my_reports_screen.dart';
-import '../screens/placeholder_screen.dart';
+import '../screens/notifications_screen.dart';
+import '../screens/profile_screen.dart';
 import '../screens/report_issue_screen.dart';
 
 class MainNavigation extends StatefulWidget {
@@ -41,11 +40,7 @@ class _MainNavigationState extends State<MainNavigation> {
       ),
       const MyReportsScreen(),
       const NotificationsScreen(),
-      const PlaceholderScreen(
-        title: 'Profile',
-        subtitle: 'Manage your account and preferences.',
-        icon: Icons.person_outline_rounded,
-      ),
+      const ProfileScreen(),
     ];
 
     return Scaffold(
