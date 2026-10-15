@@ -25,9 +25,9 @@ extension ReportStatusStyle on ReportStatus {
       case ReportStatus.inReview:
         return Colors.indigo.shade700;
       case ReportStatus.inProgress:
-        return Colors.orange.shade900;
+        return const Color(0xFFB34700);
       case ReportStatus.resolved:
-        return Colors.green.shade800;
+        return Colors.green.shade900;
     }
   }
 }
