@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 
 import '../screens/home_screen.dart';
+import '../screens/my_reports_screen.dart';
 import '../screens/placeholder_screen.dart';
 import '../screens/report_issue_screen.dart';
 
@@ -37,11 +38,7 @@ class _MainNavigationState extends State<MainNavigation> {
         onMyReportsTap: () => _selectTab(1),
         onNotificationsTap: () => _selectTab(2),
       ),
-      const PlaceholderScreen(
-        title: 'My Reports',
-        subtitle: 'Track the status of your submitted issues.',
-        icon: Icons.assignment_outlined,
-      ),
+      const MyReportsScreen(),
       const PlaceholderScreen(
         title: 'Notifications',
         subtitle: 'Stay updated on your maintenance reports.',
