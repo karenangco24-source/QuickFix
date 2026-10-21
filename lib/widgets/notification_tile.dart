@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../models/app_notification.dart';
+import '../theme/app_theme.dart';
 import 'notification_style.dart';
 import 'status_chip.dart';
 
 /// One tappable notification in the Notifications list.
-/// Unread items show a "NEW" text badge and bold title, not just a color.
+/// All cards share the app's white/yellow look. Unread items are marked by a
+/// pale yellow fill, a yellow outline, a "NEW" text badge, and a bold title,
+/// so color is never the only signal.
 class NotificationTile extends StatelessWidget {
   const NotificationTile({
     super.key,
@@ -21,14 +24,28 @@ class NotificationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final type = notification.type;
     final isUnread = !notification.isRead;
 
+    // Solid colors (not see-through), so the card never looks muddy.
+    final unreadFill =
+        Color.alphaBlend(AppTheme.primaryYellow.withAlpha(46), Colors.white);
+
     return Card(
+      elevation: 0,
       margin: const EdgeInsets.symmetric(vertical: 6),
-      color: isUnread ? type.color.withAlpha(18) : null,
+      color: isUnread ? unreadFill : Colors.white,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(
+          color: isUnread
+              ? AppTheme.primaryYellow
+              : AppTheme.darkText.withAlpha(31),
+          width: isUnread ? 1.5 : 1,
+        ),
+      ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -36,8 +53,8 @@ class NotificationTile extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               CircleAvatar(
-                backgroundColor: type.color.withAlpha(30),
-                child: Icon(type.icon, color: type.color),
+                backgroundColor: AppTheme.primaryYellow.withAlpha(64),
+                child: Icon(notification.type.icon, color: AppTheme.darkText),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -82,18 +99,17 @@ class _NewBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     return Container(
       margin: const EdgeInsets.only(left: 8),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: scheme.primary,
+        color: AppTheme.darkText,
         borderRadius: BorderRadius.circular(10),
       ),
-      child: Text(
+      child: const Text(
         'NEW',
         style: TextStyle(
-          color: scheme.onPrimary,
+          color: Colors.white,
           fontSize: 11,
           fontWeight: FontWeight.w700,
         ),
