@@ -3,12 +3,17 @@ import 'package:flutter/material.dart';
 import '../models/report.dart';
 import 'status_chip.dart';
 
-/// One tappable report in the My Reports list.
 class ReportCard extends StatelessWidget {
-  const ReportCard({super.key, required this.report, required this.onTap});
+  const ReportCard({
+    super.key,
+    required this.report,
+    required this.onTap,
+    this.showReporter = false,
+  });
 
   final Report report;
   final VoidCallback onTap;
+  final bool showReporter;
 
   @override
   Widget build(BuildContext context) {
@@ -42,6 +47,13 @@ class ReportCard extends StatelessWidget {
                 '${report.category} • ${report.location}',
                 style: textTheme.bodyMedium,
               ),
+              if (showReporter) ...[
+                const SizedBox(height: 4),
+                Text(
+                  'Reported by ${report.reporterName}',
+                  style: textTheme.bodySmall,
+                ),
+              ],
             ],
           ),
         ),

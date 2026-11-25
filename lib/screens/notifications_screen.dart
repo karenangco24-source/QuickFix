@@ -1,18 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../models/notification_type.dart';
-import '../repositories/mock_notification_repository.dart';
 import '../repositories/notification_repository.dart';
 import '../viewmodels/notifications_viewmodel.dart';
 import '../widgets/notification_tile.dart';
 
-/// View only: draws what the ViewModel exposes and forwards user actions.
 class NotificationsScreen extends StatefulWidget {
-  const NotificationsScreen({super.key, this.repository});
+  const NotificationsScreen({super.key, required this.repository});
 
-  /// Optional so the data source can be injected (e.g. for tests).
-  /// Falls back to the mock repository for the prototype.
-  final NotificationRepository? repository;
+  final NotificationRepository repository;
 
   @override
   State<NotificationsScreen> createState() => _NotificationsScreenState();
@@ -24,9 +20,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   void initState() {
     super.initState();
-    _viewModel = NotificationsViewModel(
-      widget.repository ?? MockNotificationRepository(),
-    );
+    _viewModel = NotificationsViewModel(widget.repository);
     _viewModel.load();
   }
 

@@ -1,8 +1,20 @@
 import '../models/app_notification.dart';
+import '../models/notification_type.dart';
+import '../models/report_status.dart';
 
-/// Abstraction the NotificationsViewModel depends on (Dependency Inversion).
-/// A real backend or push service can replace the mock later without
-/// changing the ViewModel or the screen (Open/Closed).
 abstract class NotificationRepository {
-  Future<List<AppNotification>> getNotifications();
+  Stream<List<AppNotification>> watchNotifications();
+
+  Future<void> addNotification({
+    required String userId,
+    required NotificationType type,
+    required String title,
+    required String message,
+    required String reportId,
+    ReportStatus? status,
+  });
+
+  Future<void> markAsRead(String id);
+
+  Future<void> markAllAsRead();
 }

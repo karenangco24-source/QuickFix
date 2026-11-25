@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Text field whose label is ALWAYS visible (it never disappears into a hint).
-/// Required/optional is spelled out in the label text, not just by color.
 class LabeledTextField extends StatelessWidget {
   const LabeledTextField({
     super.key,
@@ -10,9 +8,13 @@ class LabeledTextField extends StatelessWidget {
     this.hint,
     this.helper,
     this.icon,
+    this.suffixIcon,
     this.keyboardType,
     this.textInputAction,
     this.validator,
+    this.onFieldSubmitted,
+    this.autofillHints,
+    this.obscureText = false,
     this.isRequired = true,
   });
 
@@ -21,9 +23,13 @@ class LabeledTextField extends StatelessWidget {
   final String? hint;
   final String? helper;
   final IconData? icon;
+  final Widget? suffixIcon;
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
   final FormFieldValidator<String>? validator;
+  final ValueChanged<String>? onFieldSubmitted;
+  final Iterable<String>? autofillHints;
+  final bool obscureText;
   final bool isRequired;
 
   @override
@@ -33,6 +39,9 @@ class LabeledTextField extends StatelessWidget {
       keyboardType: keyboardType,
       textInputAction: textInputAction,
       validator: validator,
+      onFieldSubmitted: onFieldSubmitted,
+      autofillHints: autofillHints,
+      obscureText: obscureText,
       autovalidateMode: AutovalidateMode.onUserInteraction,
       style: const TextStyle(fontSize: 16),
       decoration: InputDecoration(
@@ -43,6 +52,7 @@ class LabeledTextField extends StatelessWidget {
         helperMaxLines: 2,
         errorMaxLines: 2,
         prefixIcon: icon == null ? null : Icon(icon),
+        suffixIcon: suffixIcon,
         border: const OutlineInputBorder(),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
