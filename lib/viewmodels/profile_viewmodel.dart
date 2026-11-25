@@ -4,28 +4,28 @@ import '../models/help_topic.dart';
 import '../models/notification_type.dart';
 import '../models/user_profile.dart';
 import '../repositories/help_repository.dart';
+import '../repositories/notification_preferences_repository.dart';
 import '../repositories/profile_repository.dart';
 
-/// State and logic for the Profile and Edit Profile screens.
-/// Depends only on the repository abstractions.
 class ProfileViewModel extends ChangeNotifier {
   ProfileViewModel({
     required ProfileRepository profileRepository,
     required HelpRepository helpRepository,
+    required NotificationPreferencesRepository notificationPreferences,
   })  : _profileRepository = profileRepository,
-        _helpRepository = helpRepository;
+        _helpRepository = helpRepository,
+        _notificationPreferences = notificationPreferences;
 
   final ProfileRepository _profileRepository;
   final HelpRepository _helpRepository;
+  final NotificationPreferencesRepository _notificationPreferences;
 
   bool _isLoading = false;
   bool _isSaving = false;
   String? _errorMessage;
   UserProfile? _profile;
   List<HelpTopic> _helpTopics = const [];
-  final Map<NotificationType, bool> _notificationSettings = {
-    for (final type in NotificationType.values) type: true,
-  };
+  Map<NotificationType, bool> _notificationSettings = const {};
 
   bool get isLoading => _isLoading;
   bool get isSaving => _isSaving;
@@ -33,7 +33,6 @@ class ProfileViewModel extends ChangeNotifier {
   UserProfile? get profile => _profile;
   List<HelpTopic> get helpTopics => _helpTopics;
 
-  /// Initials for the avatar, e.g. "Juan Dela Cruz" -> "JC".
   String get initials {
     final name = _profile?.fullName.trim() ?? '';
     final parts =
@@ -54,6 +53,7 @@ class ProfileViewModel extends ChangeNotifier {
     try {
       _profile = await _profileRepository.getProfile();
       _helpTopics = await _helpRepository.getHelpTopics();
+      _notificationSettings = await _notificationPreferences.getPreferences();
     } catch (_) {
       _errorMessage = 'Could not load your profile. Please try again.';
     } finally {
@@ -62,15 +62,28 @@ class ProfileViewModel extends ChangeNotifier {
     }
   }
 
-  void setNotificationEnabled(NotificationType type, bool enabled) {
-    _notificationSettings[type] = enabled;
+  Future<void> setNotificationEnabled(
+    NotificationType type,
+    bool enabled,
+  ) async {
+    final previous = _notificationSettings;
+    _notificationSettings = {...previous, type: enabled};
     notifyListeners();
+
+    try {
+      await _notificationPreferences.setEnabled(type, enabled);
+    } catch (_) {
+      _notificationSettings = previous;
+      notifyListeners();
+    }
   }
 
-  /// Returns true when the profile was saved.
   Future<bool> saveProfile({
     required String fullName,
     required String studentId,
+    required String course,
+    required String employeeId,
+    required String department,
     required String email,
     required String phone,
   }) async {
@@ -84,6 +97,9 @@ class ProfileViewModel extends ChangeNotifier {
       final updated = current.copyWith(
         fullName: fullName,
         studentId: studentId,
+        course: course,
+        employeeId: employeeId,
+        department: department,
         email: email,
         phone: phone,
       );

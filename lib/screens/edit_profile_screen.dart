@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../models/user_role.dart';
 import '../viewmodels/profile_validators.dart';
 import '../viewmodels/profile_viewmodel.dart';
 import '../widgets/labeled_text_field.dart';
 
-/// View only: a form with visible labels. Validation rules live in
-/// ProfileValidators, and saving is done by the ProfileViewModel.
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key, required this.viewModel});
 
@@ -19,8 +18,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
   late final TextEditingController _studentIdController;
+  late final TextEditingController _courseController;
+  late final TextEditingController _employeeIdController;
+  late final TextEditingController _departmentController;
   late final TextEditingController _emailController;
   late final TextEditingController _phoneController;
+
+  bool get _isStaff => widget.viewModel.profile?.role == UserRole.staff;
 
   @override
   void initState() {
@@ -29,6 +33,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _nameController = TextEditingController(text: profile?.fullName ?? '');
     _studentIdController =
         TextEditingController(text: profile?.studentId ?? '');
+    _courseController = TextEditingController(text: profile?.course ?? '');
+    _employeeIdController =
+        TextEditingController(text: profile?.employeeId ?? '');
+    _departmentController =
+        TextEditingController(text: profile?.department ?? '');
     _emailController = TextEditingController(text: profile?.email ?? '');
     _phoneController = TextEditingController(text: profile?.phone ?? '');
   }
@@ -37,6 +46,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   void dispose() {
     _nameController.dispose();
     _studentIdController.dispose();
+    _courseController.dispose();
+    _employeeIdController.dispose();
+    _departmentController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
     super.dispose();
@@ -49,6 +61,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final saved = await widget.viewModel.saveProfile(
       fullName: _nameController.text.trim(),
       studentId: _studentIdController.text.trim(),
+      course: _courseController.text.trim(),
+      employeeId: _employeeIdController.text.trim(),
+      department: _departmentController.text.trim(),
       email: _emailController.text.trim(),
       phone: _phoneController.text.trim(),
     );
@@ -67,6 +82,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isStaff = _isStaff;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Edit Profile')),
       body: SafeArea(
@@ -84,14 +101,42 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 validator: ProfileValidators.fullName,
               ),
               const SizedBox(height: 24),
-              LabeledTextField(
-                label: 'Student ID',
-                controller: _studentIdController,
-                icon: Icons.badge_outlined,
-                textInputAction: TextInputAction.next,
-                helper: 'Letters, numbers, or dashes.',
-                validator: ProfileValidators.studentId,
-              ),
+              if (isStaff) ...[
+                LabeledTextField(
+                  label: 'Employee ID',
+                  controller: _employeeIdController,
+                  icon: Icons.badge_outlined,
+                  textInputAction: TextInputAction.next,
+                  helper: 'Letters, numbers, or dashes.',
+                  validator: ProfileValidators.employeeId,
+                ),
+                const SizedBox(height: 24),
+                LabeledTextField(
+                  label: 'Department / office',
+                  controller: _departmentController,
+                  icon: Icons.apartment_outlined,
+                  textInputAction: TextInputAction.next,
+                  isRequired: false,
+                ),
+              ] else ...[
+                LabeledTextField(
+                  label: 'Student ID',
+                  controller: _studentIdController,
+                  icon: Icons.badge_outlined,
+                  textInputAction: TextInputAction.next,
+                  helper: 'Letters, numbers, or dashes.',
+                  validator: ProfileValidators.studentId,
+                ),
+                const SizedBox(height: 24),
+                LabeledTextField(
+                  label: 'Course',
+                  controller: _courseController,
+                  icon: Icons.school_outlined,
+                  textInputAction: TextInputAction.next,
+                  hint: 'e.g. BS Computer Science',
+                  isRequired: false,
+                ),
+              ],
               const SizedBox(height: 24),
               LabeledTextField(
                 label: 'Email',

@@ -1,8 +1,7 @@
 import '../models/help_topic.dart';
 import 'help_repository.dart';
 
-/// Prototype help content. Swap for a real source later.
-class MockHelpRepository implements HelpRepository {
+class LocalHelpRepository implements HelpRepository {
   @override
   Future<List<HelpTopic>> getHelpTopics() async {
     return _topics;

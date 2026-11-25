@@ -2,20 +2,16 @@ import 'package:flutter/material.dart';
 
 import '../models/report.dart';
 import '../models/report_status.dart';
-import '../repositories/mock_report_repository.dart';
 import '../repositories/report_repository.dart';
 import '../viewmodels/my_reports_viewmodel.dart';
 import '../widgets/report_card.dart';
 import '../widgets/status_style.dart';
 import 'report_details_screen.dart';
 
-/// View only: draws what the ViewModel exposes and forwards user actions.
 class MyReportsScreen extends StatefulWidget {
-  const MyReportsScreen({super.key, this.repository});
+  const MyReportsScreen({super.key, required this.repository});
 
-  /// Optional so the data source can be injected (e.g. for tests).
-  /// Falls back to the mock repository for the prototype.
-  final ReportRepository? repository;
+  final ReportRepository repository;
 
   @override
   State<MyReportsScreen> createState() => _MyReportsScreenState();
@@ -27,8 +23,7 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
   @override
   void initState() {
     super.initState();
-    _viewModel =
-        MyReportsViewModel(widget.repository ?? MockReportRepository());
+    _viewModel = MyReportsViewModel(widget.repository);
     _viewModel.loadReports();
   }
 
@@ -65,7 +60,8 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
           }
           if (_viewModel.isEmpty) {
             return const _MessageView(
-              message: 'You have not submitted any reports yet.',
+              message: 'You have not submitted any reports yet.\n'
+                  'Tap "Report an Issue" on the Home tab to send your first one.',
             );
           }
 

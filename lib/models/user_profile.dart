@@ -1,30 +1,43 @@
-/// Immutable data model for the signed-in student.
+import 'user_role.dart';
+
 class UserProfile {
   const UserProfile({
     required this.fullName,
-    required this.studentId,
     required this.email,
-    required this.course,
+    this.role = UserRole.student,
+    this.studentId = '',
+    this.course = '',
+    this.employeeId = '',
+    this.department = '',
     this.phone = '',
   });
 
   final String fullName;
-  final String studentId;
   final String email;
+  final UserRole role;
+  final String studentId; 
   final String course;
+  final String employeeId; 
+  final String department; 
   final String phone;
 
   UserProfile copyWith({
     String? fullName,
-    String? studentId,
     String? email,
+    String? studentId,
+    String? course,
+    String? employeeId,
+    String? department,
     String? phone,
   }) {
     return UserProfile(
       fullName: fullName ?? this.fullName,
-      studentId: studentId ?? this.studentId,
       email: email ?? this.email,
-      course: course,
+      role: role,
+      studentId: studentId ?? this.studentId,
+      course: course ?? this.course,
+      employeeId: employeeId ?? this.employeeId,
+      department: department ?? this.department,
       phone: phone ?? this.phone,
     );
   }

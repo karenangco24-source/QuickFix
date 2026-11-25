@@ -1,19 +1,44 @@
-
 import 'package:flutter/material.dart';
 
+import '../models/user_profile.dart';
+import '../repositories/profile_repository.dart';
 import '../theme/app_theme.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
+  final ProfileRepository profileRepository;
   final VoidCallback onReportTap;
   final VoidCallback onMyReportsTap;
   final VoidCallback onNotificationsTap;
 
   const HomeScreen({
     super.key,
+    required this.profileRepository,
     required this.onReportTap,
     required this.onMyReportsTap,
     required this.onNotificationsTap,
   });
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  late final Stream<UserProfile?> _profileStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _profileStream = widget.profileRepository.watchProfile();
+  }
+
+  String? _firstName(String? fullName) {
+    final parts = (fullName ?? '')
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((p) => p.isNotEmpty)
+        .toList();
+    return parts.isEmpty ? null : parts.first;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -63,7 +88,7 @@ class HomeScreen extends StatelessWidget {
                 ),
                 IconButton(
                   tooltip: 'Notifications',
-                  onPressed: onNotificationsTap,
+                  onPressed: widget.onNotificationsTap,
                   icon: const Icon(Icons.notifications_none_rounded),
                   style: IconButton.styleFrom(
                     backgroundColor: Colors.white,
@@ -75,14 +100,22 @@ class HomeScreen extends StatelessWidget {
 
             const SizedBox(height: 32),
 
-            const Text(
-              'Hello, there! 👋',
-              style: TextStyle(
-                fontSize: 27,
-                fontWeight: FontWeight.w800,
-                color: AppTheme.darkText,
-                letterSpacing: -0.7,
-              ),
+            StreamBuilder<UserProfile?>(
+              stream: _profileStream,
+              builder: (context, snapshot) {
+                final firstName = _firstName(snapshot.data?.fullName);
+                return Text(
+                  firstName == null
+                      ? 'Hello, there! 👋'
+                      : 'Hello, $firstName! 👋',
+                  style: const TextStyle(
+                    fontSize: 27,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.darkText,
+                    letterSpacing: -0.7,
+                  ),
+                );
+              },
             ),
             const SizedBox(height: 8),
             const Text(
@@ -101,7 +134,7 @@ class HomeScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(24),
               clipBehavior: Clip.antiAlias,
               child: InkWell(
-                onTap: onReportTap,
+                onTap: widget.onReportTap,
                 child: Padding(
                   padding: const EdgeInsets.all(22),
                   child: Column(
@@ -193,7 +226,7 @@ class HomeScreen extends StatelessWidget {
                     icon: Icons.assignment_outlined,
                     title: 'My Reports',
                     subtitle: 'Track your issues',
-                    onTap: onMyReportsTap,
+                    onTap: widget.onMyReportsTap,
                   ),
                 ),
                 const SizedBox(width: 13),
@@ -202,7 +235,7 @@ class HomeScreen extends StatelessWidget {
                     icon: Icons.notifications_active_outlined,
                     title: 'Notifications',
                     subtitle: 'See updates',
-                    onTap: onNotificationsTap,
+                    onTap: widget.onNotificationsTap,
                   ),
                 ),
               ],

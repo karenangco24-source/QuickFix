@@ -2,21 +2,43 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../lib/models/report_status.dart';
+import '../lib/models/user_profile.dart';
+import '../lib/repositories/in_memory_auth_repository.dart';
+import '../lib/repositories/in_memory_notification_repository.dart';
+import '../lib/repositories/in_memory_profile_repository.dart';
+import '../lib/repositories/local_help_repository.dart';
 import '../lib/screens/profile_screen.dart';
 import '../lib/theme/app_theme.dart';
 import '../lib/widgets/status_chip.dart';
 
-/// Automated accessibility checks for the Profile and Accessibility section.
-/// Run with:  flutter test test/profile_accessibility_test.dart
 void main() {
   testWidgets('Profile screen: tap targets, labels, and text contrast',
       (tester) async {
     final handle = tester.ensureSemantics();
 
+    final auth = InMemoryAuthRepository();
+    await tester.runAsync(
+      () => auth.signUp(
+        profile: const UserProfile(
+          fullName: 'Juan Dela Cruz',
+          email: 'juan.delacruz@school.edu',
+          studentId: '2023-00123',
+          course: 'BS Computer Science',
+        ),
+        password: 'test123',
+      ),
+    );
+    final notifications = InMemoryNotificationRepository(auth);
+
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.lightTheme,
-        home: const ProfileScreen(),
+        home: ProfileScreen(
+          profileRepository: InMemoryProfileRepository(auth),
+          helpRepository: LocalHelpRepository(),
+          notificationPreferences: notifications,
+          onSignOut: auth.signOut,
+        ),
       ),
     );
     await tester.pumpAndSettle();

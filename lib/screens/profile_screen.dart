@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../models/notification_type.dart';
 import '../models/user_profile.dart';
+import '../models/user_role.dart';
 import '../repositories/help_repository.dart';
-import '../repositories/mock_help_repository.dart';
-import '../repositories/mock_profile_repository.dart';
+import '../repositories/notification_preferences_repository.dart';
 import '../repositories/profile_repository.dart';
 import '../viewmodels/profile_viewmodel.dart';
 import '../widgets/notification_style.dart';
@@ -13,19 +13,19 @@ import '../widgets/section_header.dart';
 import '../widgets/status_legend.dart';
 import 'edit_profile_screen.dart';
 
-/// View only: draws what the ViewModel exposes and forwards user actions.
-/// Sections: Account, Notifications, Help.
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({
     super.key,
-    this.profileRepository,
-    this.helpRepository,
+    required this.profileRepository,
+    required this.helpRepository,
+    required this.notificationPreferences,
+    required this.onSignOut,
   });
 
-  /// Optional so data sources can be injected (e.g. for tests).
-  /// Fall back to the mock repositories for the prototype.
-  final ProfileRepository? profileRepository;
-  final HelpRepository? helpRepository;
+  final ProfileRepository profileRepository;
+  final HelpRepository helpRepository;
+  final NotificationPreferencesRepository notificationPreferences;
+  final Future<void> Function() onSignOut;
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -38,8 +38,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     _viewModel = ProfileViewModel(
-      profileRepository: widget.profileRepository ?? MockProfileRepository(),
-      helpRepository: widget.helpRepository ?? MockHelpRepository(),
+      profileRepository: widget.profileRepository,
+      helpRepository: widget.helpRepository,
+      notificationPreferences: widget.notificationPreferences,
     );
     _viewModel.load();
   }
@@ -62,6 +63,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Future<void> _confirmSignOut() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Sign out?'),
+        content: const Text('You will need to sign in again to continue.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Sign out'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await widget.onSignOut();
+    }
+  }
+
   String _description(NotificationType type) {
     switch (type) {
       case NotificationType.reportReceived:
@@ -71,6 +95,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
       case NotificationType.issueResolved:
         return 'Tells you when your issue has been fixed.';
     }
+  }
+
+  String _subtitle(UserProfile profile) {
+    final parts = profile.role == UserRole.staff
+        ? [profile.employeeId, profile.department]
+        : [profile.studentId, profile.course];
+    final shown = parts.where((s) => s.isNotEmpty);
+    return shown.isEmpty ? profile.email : shown.join(' • ');
   }
 
   @override
@@ -99,16 +131,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildContent(BuildContext context, UserProfile profile) {
+    final isStaff = profile.role == UserRole.staff;
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         _ProfileHeader(
           initials: _viewModel.initials,
           name: profile.fullName,
-          subtitle: '${profile.studentId} • ${profile.course}',
+          subtitle: _subtitle(profile),
         ),
 
-        // ---- Account ----
         const SectionHeader(icon: Icons.person_outline_rounded, title: 'Account'),
         Card(
           child: Padding(
@@ -121,15 +154,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   value: profile.fullName,
                 ),
                 ProfileInfoRow(
-                  icon: Icons.badge_outlined,
-                  label: 'Student ID',
-                  value: profile.studentId,
+                  icon: Icons.verified_user_outlined,
+                  label: 'Role',
+                  value: profile.role.label,
                 ),
-                ProfileInfoRow(
-                  icon: Icons.school_outlined,
-                  label: 'Course',
-                  value: profile.course,
-                ),
+                if (isStaff) ...[
+                  ProfileInfoRow(
+                    icon: Icons.badge_outlined,
+                    label: 'Employee ID',
+                    value: profile.employeeId,
+                  ),
+                  ProfileInfoRow(
+                    icon: Icons.apartment_outlined,
+                    label: 'Department / office',
+                    value: profile.department,
+                  ),
+                ] else ...[
+                  ProfileInfoRow(
+                    icon: Icons.badge_outlined,
+                    label: 'Student ID',
+                    value: profile.studentId,
+                  ),
+                  ProfileInfoRow(
+                    icon: Icons.school_outlined,
+                    label: 'Course',
+                    value: profile.course,
+                  ),
+                ],
                 ProfileInfoRow(
                   icon: Icons.email_outlined,
                   label: 'Email',
@@ -157,31 +208,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
 
-        // ---- Notifications ----
-        const SectionHeader(
-          icon: Icons.notifications_none_rounded,
-          title: 'Notifications',
-        ),
-        Card(
-          child: Column(
-            children: [
-              for (final type in NotificationType.values)
-                SwitchListTile(
-                  secondary: Icon(type.icon, color: type.color),
-                  title: Text(type.label),
-                  subtitle: Text(
-                    '${_description(type)} Currently '
-                    '${_viewModel.isNotificationEnabled(type) ? 'on' : 'off'}.',
-                  ),
-                  value: _viewModel.isNotificationEnabled(type),
-                  onChanged: (value) =>
-                      _viewModel.setNotificationEnabled(type, value),
-                ),
-            ],
+        if (!isStaff) ...[
+          const SectionHeader(
+            icon: Icons.notifications_none_rounded,
+            title: 'Notifications',
           ),
-        ),
+          Card(
+            child: Column(
+              children: [
+                for (final type in NotificationType.values)
+                  SwitchListTile(
+                    secondary: Icon(type.icon, color: type.color),
+                    title: Text(type.label),
+                    subtitle: Text(
+                      '${_description(type)} Currently '
+                      '${_viewModel.isNotificationEnabled(type) ? 'on' : 'off'}.',
+                    ),
+                    value: _viewModel.isNotificationEnabled(type),
+                    onChanged: (value) =>
+                        _viewModel.setNotificationEnabled(type, value),
+                  ),
+              ],
+            ),
+          ),
+        ],
 
-        // ---- Help ----
         const SectionHeader(icon: Icons.help_outline_rounded, title: 'Help'),
         Card(
           clipBehavior: Clip.antiAlias,
@@ -194,20 +245,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 expandedCrossAxisAlignment: CrossAxisAlignment.start,
                 children: [StatusLegend()],
               ),
-              for (final topic in _viewModel.helpTopics)
-                ExpansionTile(
-                  leading: const Icon(Icons.help_outline_rounded),
-                  title: Text(topic.question),
-                  childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  expandedCrossAxisAlignment: CrossAxisAlignment.start,
-                  children: [Text(topic.answer)],
-                ),
+              if (!isStaff)
+                for (final topic in _viewModel.helpTopics)
+                  ExpansionTile(
+                    leading: const Icon(Icons.help_outline_rounded),
+                    title: Text(topic.question),
+                    childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    expandedCrossAxisAlignment: CrossAxisAlignment.start,
+                    children: [Text(topic.answer)],
+                  ),
               const ListTile(
                 leading: Icon(Icons.mail_outline_rounded),
                 title: Text('Contact support'),
                 subtitle: SelectableText('support@campusfix.school.edu'),
               ),
             ],
+          ),
+        ),
+
+        // ---- Sign out ----
+        const SizedBox(height: 24),
+        OutlinedButton.icon(
+          onPressed: _confirmSignOut,
+          icon: const Icon(Icons.logout_rounded),
+          label: const Text('Sign out'),
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size.fromHeight(52),
           ),
         ),
         const SizedBox(height: 16),

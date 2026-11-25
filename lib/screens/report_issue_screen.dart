@@ -1,13 +1,26 @@
 
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-
+import '../models/report.dart';
+import '../repositories/notification_repository.dart';
+import '../repositories/report_repository.dart';
+import '../repositories/profile_repository.dart';
 import '../theme/app_theme.dart';
+import '../viewmodels/report_issue_viewmodel.dart';
+import '../widgets/status_chip.dart';
 
 class ReportIssueScreen extends StatefulWidget {
-  const ReportIssueScreen({super.key});
+  const ReportIssueScreen({
+    super.key,
+    required this.reportRepository,
+    required this.notificationRepository,
+    required this.profileRepository,
+  });
+
+  final ReportRepository reportRepository;
+  final NotificationRepository notificationRepository;
+  final ProfileRepository profileRepository;
 
   @override
   State<ReportIssueScreen> createState() => _ReportIssueScreenState();
@@ -15,29 +28,33 @@ class ReportIssueScreen extends StatefulWidget {
 
 class _ReportIssueScreenState extends State<ReportIssueScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _titleController = TextEditingController();
   final _locationController = TextEditingController();
   final _descriptionController = TextEditingController();
 
   final ImagePicker _imagePicker = ImagePicker();
+  late final ReportIssueViewModel _viewModel;
 
   String? _selectedIssueType;
   XFile? _selectedImage;
 
-  bool _isSubmitting = false;
+  @override
+  void initState() {
+    super.initState();
 
-  final List<String> _issueTypes = [
-    'Damaged pavement',
-    'Broken equipment',
-    'Electrical issue',
-    'Plumbing issue',
-    'Lighting issue',
-    'Other',
-  ];
+    _viewModel = ReportIssueViewModel(
+      reportRepository: widget.reportRepository,
+      notificationRepository: widget.notificationRepository,
+      profileRepository: widget.profileRepository,
+    );
+  }
 
   @override
   void dispose() {
+    _titleController.dispose();
     _locationController.dispose();
     _descriptionController.dispose();
+    _viewModel.dispose();
     super.dispose();
   }
 
@@ -75,28 +92,28 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
 
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() {
-      _isSubmitting = true;
-    });
-
-    await Future<void>.delayed(const Duration(milliseconds: 500));
+    final report = await _viewModel.submit(
+      title: _titleController.text.trim(),
+      description: _descriptionController.text.trim(),
+      category: _selectedIssueType!,
+      location: _locationController.text.trim(),
+      photoPath: _selectedImage?.path,
+    );
 
     if (!mounted) return;
 
-    setState(() {
-      _isSubmitting = false;
-    });
-
-    final reportNumber =
-        'QF-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
-
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (context) => SubmissionConfirmationScreen(
-          reportNumber: reportNumber,
-          issueType: _selectedIssueType!,
-          location: _locationController.text.trim(),
+    if (report == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not submit your report. Please try again.'),
         ),
+      );
+      return;
+    }
+
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute<void>(
+        builder: (_) => SubmissionConfirmationScreen(report: report),
       ),
     );
   }
@@ -143,7 +160,7 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
                   hint: 'Select the type of issue',
                   icon: Icons.category_outlined,
                 ),
-                items: _issueTypes.map((type) {
+                items: ReportIssueViewModel.issueTypes.map((type) {
                   return DropdownMenuItem(
                     value: type,
                     child: Text(type),
@@ -162,6 +179,28 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
                 },
               ),
               const SizedBox(height: 22),
+
+              _buildLabel('Title *'),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _titleController,
+                maxLength: 60,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: _inputDecoration(
+                  hint: 'e.g. Broken light in hallway',
+                  icon: Icons.title_rounded,
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter a short title.';
+                  }
+                  if (value.trim().length < 3) {
+                    return 'Please enter at least 3 characters.';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 14),
 
               _buildLabel('Location *'),
               const SizedBox(height: 8),
@@ -274,36 +313,43 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
                 ),
               const SizedBox(height: 32),
 
-              SizedBox(
-                height: 54,
-                child: FilledButton.icon(
-                  onPressed: _isSubmitting ? null : _submitReport,
-                  icon: _isSubmitting
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : const Icon(Icons.send_rounded),
-                  label: Text(
-                    _isSubmitting ? 'Submitting...' : 'Submit Report',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
+              ListenableBuilder(
+                listenable: _viewModel,
+                builder: (context, _) {
+                  final isSubmitting = _viewModel.isSubmitting;
+
+                  return SizedBox(
+                    height: 54,
+                    child: FilledButton.icon(
+                      onPressed: isSubmitting ? null : _submitReport,
+                      icon: isSubmitting
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Icon(Icons.send_rounded),
+                      label: Text(
+                        isSubmitting ? 'Submitting...' : 'Submit Report',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppTheme.primaryYellow,
+                        foregroundColor: AppTheme.darkText,
+                        disabledBackgroundColor:
+                            AppTheme.primaryYellow.withValues(alpha: 0.5),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
                     ),
-                  ),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppTheme.primaryYellow,
-                    foregroundColor: AppTheme.darkText,
-                    disabledBackgroundColor:
-                        AppTheme.primaryYellow.withValues(alpha: 0.5),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                ),
+                  );
+                },
               ),
               const SizedBox(height: 20),
               const Text(
@@ -371,16 +417,9 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
 }
 
 class SubmissionConfirmationScreen extends StatelessWidget {
-  final String reportNumber;
-  final String issueType;
-  final String location;
+  final Report report;
 
-  const SubmissionConfirmationScreen({
-    super.key,
-    required this.reportNumber,
-    required this.issueType,
-    required this.location,
-  });
+  const SubmissionConfirmationScreen({super.key, required this.report});
 
   @override
   Widget build(BuildContext context) {
@@ -425,7 +464,7 @@ class SubmissionConfirmationScreen extends StatelessWidget {
                 const SizedBox(height: 10),
                 const Text(
                   'Thank you for helping improve our campus. '
-                  'Your report has been received.',
+                  'You can follow it in the My Reports tab.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 15,
@@ -465,7 +504,7 @@ class SubmissionConfirmationScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                       SelectableText(
-                        reportNumber,
+                        report.id,
                         style: const TextStyle(
                           fontSize: 23,
                           fontWeight: FontWeight.w800,
@@ -483,34 +522,7 @@ class SubmissionConfirmationScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 10),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryYellow.withValues(alpha: 0.25),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.inbox_outlined,
-                              size: 18,
-                              color: AppTheme.darkText,
-                            ),
-                            SizedBox(width: 8),
-                            Text(
-                              'Received',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                color: AppTheme.darkText,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                      StatusChip(status: report.status),
                       const SizedBox(height: 24),
                       const Text(
                         'REPORT DETAILS',
@@ -522,9 +534,14 @@ class SubmissionConfirmationScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      _detailRow(Icons.category_outlined, issueType),
+                      _detailRow(Icons.title_rounded, report.title),
                       const SizedBox(height: 10),
-                      _detailRow(Icons.location_on_outlined, location),
+                      _detailRow(Icons.category_outlined, report.category),
+                      const SizedBox(height: 10),
+                      _detailRow(
+                        Icons.location_on_outlined,
+                        report.location,
+                      ),
                     ],
                   ),
                 ),
@@ -533,12 +550,7 @@ class SubmissionConfirmationScreen extends StatelessWidget {
                   width: double.infinity,
                   height: 52,
                   child: FilledButton(
-                    onPressed: () {
-                      // Return to the report form's previous screen.
-                      Navigator.of(context)
-                        ..pop()
-                        ..pop();
-                    },
+                    onPressed: () => Navigator.of(context).pop(),
                     style: FilledButton.styleFrom(
                       backgroundColor: AppTheme.primaryYellow,
                       foregroundColor: AppTheme.darkText,

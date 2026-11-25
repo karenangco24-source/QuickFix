@@ -1,11 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../models/report.dart';
 import '../models/report_status.dart';
 import '../repositories/report_repository.dart';
 
-/// State and logic for the My Reports screen.
-/// Depends only on the ReportRepository abstraction.
 class MyReportsViewModel extends ChangeNotifier {
   MyReportsViewModel(this._repository);
 
@@ -14,13 +14,12 @@ class MyReportsViewModel extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
   List<Report> _reports = const [];
+  StreamSubscription<List<Report>>? _subscription;
 
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get isEmpty => !_isLoading && _errorMessage == null && _reports.isEmpty;
 
-  /// Reports grouped by status, in the order of the ReportStatus enum.
-  /// Newest reports come first inside each group. Empty groups are skipped.
   Map<ReportStatus, List<Report>> get groupedByStatus {
     final grouped = <ReportStatus, List<Report>>{};
     for (final status in ReportStatus.values) {
@@ -33,18 +32,30 @@ class MyReportsViewModel extends ChangeNotifier {
     return grouped;
   }
 
-  Future<void> loadReports() async {
+  void loadReports() {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
-    try {
-      _reports = await _repository.getMyReports();
-    } catch (_) {
-      _errorMessage = 'Could not load your reports. Please try again.';
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
+    _subscription?.cancel();
+    _subscription = _repository.watchMyReports().listen(
+      (reports) {
+        _reports = reports;
+        _isLoading = false;
+        _errorMessage = null;
+        notifyListeners();
+      },
+      onError: (Object _) {
+        _isLoading = false;
+        _errorMessage = 'Could not load your reports. Please try again.';
+        notifyListeners();
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
   }
 }

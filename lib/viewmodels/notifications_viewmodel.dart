@@ -1,11 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../models/app_notification.dart';
 import '../models/notification_type.dart';
 import '../repositories/notification_repository.dart';
 
-/// State and logic for the Notifications screen.
-/// Depends only on the NotificationRepository abstraction.
 class NotificationsViewModel extends ChangeNotifier {
   NotificationsViewModel(this._repository);
 
@@ -14,7 +14,8 @@ class NotificationsViewModel extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
   List<AppNotification> _all = const [];
-  NotificationType? _filter; // null means "All"
+  NotificationType? _filter; 
+  StreamSubscription<List<AppNotification>>? _subscription;
 
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
@@ -22,7 +23,6 @@ class NotificationsViewModel extends ChangeNotifier {
   bool get isEmpty => !_isLoading && _errorMessage == null && _all.isEmpty;
   int get unreadCount => _all.where((n) => !n.isRead).length;
 
-  /// Notifications for the selected filter, newest first.
   List<AppNotification> get visibleNotifications {
     final items = _filter == null
         ? _all.toList()
@@ -31,19 +31,25 @@ class NotificationsViewModel extends ChangeNotifier {
     return items;
   }
 
-  Future<void> load() async {
+  void load() {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
-    try {
-      _all = await _repository.getNotifications();
-    } catch (_) {
-      _errorMessage = 'Could not load your notifications. Please try again.';
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
+    _subscription?.cancel();
+    _subscription = _repository.watchNotifications().listen(
+      (items) {
+        _all = items;
+        _isLoading = false;
+        _errorMessage = null;
+        notifyListeners();
+      },
+      onError: (Object _) {
+        _isLoading = false;
+        _errorMessage = 'Could not load your notifications. Please try again.';
+        notifyListeners();
+      },
+    );
   }
 
   void selectFilter(NotificationType? type) {
@@ -51,22 +57,10 @@ class NotificationsViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void markAsRead(String id) {
-    final index = _all.indexWhere((n) => n.id == id);
-    if (index == -1 || _all[index].isRead) return;
-    final updated = List<AppNotification>.of(_all);
-    updated[index] = updated[index].copyWith(isRead: true);
-    _all = updated;
-    notifyListeners();
-  }
+  Future<void> markAsRead(String id) => _repository.markAsRead(id);
 
-  void markAllAsRead() {
-    if (unreadCount == 0) return;
-    _all = _all.map((n) => n.copyWith(isRead: true)).toList();
-    notifyListeners();
-  }
+  Future<void> markAllAsRead() => _repository.markAllAsRead();
 
-  /// Display-ready timestamp, e.g. "Oct 14, 9:31 AM".
   String timeText(AppNotification notification) {
     const months = [
       'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -77,5 +71,11 @@ class NotificationsViewModel extends ChangeNotifier {
     final minute = d.minute.toString().padLeft(2, '0');
     final period = d.hour >= 12 ? 'PM' : 'AM';
     return '${months[d.month - 1]} ${d.day}, $hour12:$minute $period';
+  }
+
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
   }
 }

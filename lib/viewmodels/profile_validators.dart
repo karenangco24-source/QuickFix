@@ -1,5 +1,3 @@
-/// Form validation rules for the Edit Profile screen.
-/// Kept out of the screen so the View stays free of business rules.
 class ProfileValidators {
   const ProfileValidators._();
 
@@ -13,6 +11,15 @@ class ProfileValidators {
   static String? studentId(String? value) {
     final text = value?.trim() ?? '';
     if (text.isEmpty) return 'Please enter your student ID.';
+    if (!RegExp(r'^[A-Za-z0-9-]{4,}$').hasMatch(text)) {
+      return 'Use letters, numbers, or dashes (at least 4 characters).';
+    }
+    return null;
+  }
+
+  static String? employeeId(String? value) {
+    final text = value?.trim() ?? '';
+    if (text.isEmpty) return 'Please enter your employee ID.';
     if (!RegExp(r'^[A-Za-z0-9-]{4,}$').hasMatch(text)) {
       return 'Use letters, numbers, or dashes (at least 4 characters).';
     }

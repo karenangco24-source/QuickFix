@@ -1,9 +1,14 @@
 import '../models/report.dart';
 
-/// Abstraction the ViewModels depend on (Dependency Inversion).
-/// A real backend or database can replace the mock later without
-/// changing any ViewModel or screen (Open/Closed).
 abstract class ReportRepository {
-  Future<List<Report>> getMyReports();
-  Future<Report?> getReportById(String id);
+  Stream<List<Report>> watchMyReports();
+
+  Future<Report> submitReport({
+    required String reporterName,
+    required String title,
+    required String description,
+    required String category,
+    required String location,
+    String? photoPath,
+  });
 }
